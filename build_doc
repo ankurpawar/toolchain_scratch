@@ -1,0 +1,110 @@
+NOTE – 1. First read man page of any command that is not known or whose ouput is not known.
+2. Don't execute any command that install anything in the /usr/bin
+or any such directory that contains files important for the Host system.
+3. Don't copy and execute any given command directly.
+
+
+Types of cross compilation
+
+Type           Host(make)    Build(gcc -o hello.c)   Target(./a.out)
+Native         x86           x86                     x86
+Cross Native   x86           ARM                     ARM
+Cross Compile  x86           x86                     ARM
+Cross Canadian x86           PowerPC                 ARM
+
+Cross compilation required packages
+1. Binutils
+2. Kernel Headers (Kernel source code)
+3. GCC (minimal/bootstrap)
+4. Glibc
+5. GCC (complete)
+
+Create directory hierarchy 
+TOOLCHAIN 
+    |-- buildtools 
+    |   `-- binutils 
+    |-- packages 
+    |   |-- binutils-2.24 
+    |   |-- binutils-2.24.tar.bz2 
+    |   |-- gcc-4.5.1.tar.bz2 
+    |   |-- glibc-2.13.tar.bz2 
+    |   |-- gmp-5.0.1.tar.bz2 
+    |   |-- linux-2.6.38.8.tar.bz2 
+    |   |-- mpc-0.8.2.tar.gz 
+    |   `-- mpfr-3.0.0.tar.bz2 
+    `-- tools 
+        `-- arm-unknown-linux-gnueabi 
+                       
+
+Export variables
+(only for the current shell)
+~$ export PREFIX=/home/ankur/emblogic/TOOLCHAIN/
+~$ export TARGET=arm-unknown-linux-gnueabi
+
+Building Packages
+1. Binutils
+extract the contents from compressed archive
+~$ /TOOLCHAIN/packages$ tar -xvf binutils-2.24.tar.bz2
+
+binutils help
+~$ ../binutils/configure --help  (look for system types)
+
+By default, `make install' will install all the files in 
+`/usr/local/bin', `/usr/local/lib' etc.  You can specify 
+an installation prefix other than `/usr/local' using `--prefix', 
+for instance `--prefix=$HOME'.
+
+
+System types: 
+  --build=BUILD     configure for building on BUILD [guessed] 
+  --host=HOST       cross-compile to build programs to run on HOST [BUILD] 
+  --target=TARGET   configure for building compilers for TARGET [HOST] 
+
+configure binutils
+~$ ../binutils/configure –-prefix=$PREFIX/buildtools/binutils –-target=$TARGET
+
+make and install
+~$ make
+~$ make install
+
+
+Kernel Headers
+extract kernel source from archive
+~$ tar -xf linux-2.6.38.8.tar.bz2
+~$ make ARCH=arm menuconfig
+a. Enable debugging features in kernel
+   Kernel Hacking -> Kernel Debugging
+b. Kernel Features -> Use ARM eabi to compile the kernel
+
+select the ARM eabi to compile the kernel in kernel configuration
+cd arch/arm
+create directory TARGET/include/asm  (new kernel)
+                 TARGET/include/asm-generic (old kernel)
+copy files from linux/arch/arm to above path
+make arch=ARM header_install
+make arch=ARM –-prefix=$PREFIX header_install --target=$TARGET 
+
+GCC (minimal)
+error may come in libliberty, libstdc++, libgcc, intl
+cd install README
+installing GCC configuration
+~$ cd buildtools 
+~$ mkdir gcc
+~$ cd gcc
+~$ ./../../packages/gcc-4.5.1/configure –-help
+Installation directories:
+  --prefix=PREFIX         install architecture-independent files in PREFIX
+                          [/usr/local]
+  --exec-prefix=EPREFIX   install architecture-dependent files in EPREFIX
+                          [PREFIX]
+
+By default, `make install' will install all the files in
+`/usr/local/bin', `/usr/local/lib' etc.  You can specify
+an installation prefix other than `/usr/local' using `--prefix',
+for instance `--prefix=$HOME'.
+
+--enable-languages=c
+Specify that only a particular subset of compilers and their runtime libraries should be built.
+
+--disable-multilib
+Specify that multiple target libraries to support different target variants, calling conventions, etc. should not be built.
