@@ -1,8 +1,22 @@
-NOTE – 1. First read man page of any command that is not known or whose ouput is not known.
+NOTE – 
+1. First read man page of any command that is not known or whose output is 
+   not known.
 2. Don't execute any command that install anything in the /usr/bin
-or any such directory that contains files important for the Host system.
+   or any such directory that contains files important for the Host system.
 3. Don't copy and execute any given command directly.
 
+-----------------------------------
+
+Read about these following commands before starting 
+make
+diff
+patch
+readelf
+file
+ln
+
+
+-----------------------------------
 
 Types of cross compilation
 
@@ -12,6 +26,9 @@ Cross Native   x86           ARM                     ARM
 Cross Compile  x86           x86                     ARM
 Cross Canadian x86           PowerPC                 ARM
 
+
+-----------------------------------
+
 Cross compilation required packages
 1. Binutils
 2. Kernel Headers (Kernel source code)
@@ -19,6 +36,24 @@ Cross compilation required packages
 4. Glibc
 5. GCC (complete)
 
+Before starting first understand the significance of these packages.
+1. Why they are required?
+2. What they will do on host system and target system?
+3. How they will be built?
+
+And last question that is above all
+4. What we are going to achieve?
+
+
+
+After reading many documents online found few important points. 
+Each one was using more or less these packages. The sequence of steps involved in 
+building packages were different. For example someone was building glibc before 
+GCC minimal, someone was building it after. Final result is same.
+
+
+
+-----------------------------------
 Create directory hierarchy 
 TOOLCHAIN 
     |-- buildtools 
@@ -61,28 +96,56 @@ System types:
   --target=TARGET   configure for building compilers for TARGET [HOST] 
 
 configure binutils
-~$ ../binutils/configure –-prefix=$PREFIX/buildtools/binutils –-target=$TARGET
+~$ ../binutils/configure --prefix=$PREFIX/buildtools/binutils --target=$TARGET
 
 make and install
 ~$ make
 ~$ make install
 
+to verify locate ld-new or objcopy and types commands
+~$ ld-new --help
+~$ objcopy --info
+
 
 Kernel Headers
+
+The linux kernel's exported header files describe the API for user space
+programs attempting to use kernel services.  These kernel header files are
+used by the system's C library (such as glibc or uClibc) to define available
+system calls, as well as constants and structures to be used with these
+system calls.
+
 extract kernel source from archive
 ~$ tar -xf linux-2.6.38.8.tar.bz2
 ~$ make ARCH=arm menuconfig
+
+Want to keep the source folder clean then use O=path_to_the_install_linux 
+with make command 
+~$ make O=~/linux/linux-2.6.17.11
+
+make KBUILD_OUTPUT=/path/to/linux/source/ O=/path/to/linux/source/ ARCH=arm menuconfig
+make KBUILD_OUTPUT=/path/to/linux/source/ O=/path/to/linux/source/ ARCH=arm headers_install ARCH=arm INSTALL_HDR_PATH=/path/to/arm-unknown-linux-gnueabi/
+
 a. Enable debugging features in kernel
    Kernel Hacking -> Kernel Debugging
 b. Kernel Features -> Use ARM eabi to compile the kernel
 
 select the ARM eabi to compile the kernel in kernel configuration
+
+~$ mkdir $TARGET/include
+~$ cp -r include/linux $TARGET/include
+~$ cp -r include/asm-arm $TARGET/include/asm
+~$ cp -r include/asm-generic $TARGET_PREFIX/include/
+
+
 cd arch/arm
 create directory TARGET/include/asm  (new kernel)
                  TARGET/include/asm-generic (old kernel)
 copy files from linux/arch/arm to above path
-make arch=ARM header_install
-make arch=ARM –-prefix=$PREFIX header_install --target=$TARGET 
+
+A better and recommended way given in 
+linux-src/Documentation/make/headers_install.txt
+~$ make headers_install ARCH=arm INSTALL_HDR_PATH=$TARGET
 
 GCC (minimal)
 error may come in libliberty, libstdc++, libgcc, intl
@@ -108,3 +171,16 @@ Specify that only a particular subset of compilers and their runtime libraries s
 
 --disable-multilib
 Specify that multiple target libraries to support different target variants, calling conventions, etc. should not be built.
+
+--disable-shared to build only static libraries
+
+--without-headers
+    Tells GCC not use any target headers from a libc when building a cross compiler. When crossing to GNU/Linux, you need the headers so GCC can build the exception handling for libgcc.
+
+~/TOOLCHAIN/buildtools/gcc$ ./../../packages/gcc/configure --prefix=/home/ankur/emblogic/TOOLCHAIN/ --target=arm-unknown-linux-gnueabi --diable-multilib --disable-shared --without-headers --enable-language="c" --disable-nls --with-gmp-include=/ho
+
+
+~$ config.guess
+x86_64-unknown-linux-gnu
+
+install m4 macro processor
