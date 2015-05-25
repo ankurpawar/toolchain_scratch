@@ -1,13 +1,14 @@
 NOTE – 
-1. First read man page of any command that is not known or whose output is 
+1. This document is based on my personal experience and understanding. This
+   may be different from others.
+2. First read man page of any command that is not known or whose output is 
    not known.
-2. Don't execute any command that install anything in the /usr/bin
+3. Don't execute any command that install anything in the /usr/bin
    or any such directory that contains files important for the Host system.
-3. Don't copy and execute any given command directly.
+4. Don't copy and execute any given command directly.
 
 -----------------------------------
-
-Read about these following commands before starting 
+1. Read about the following commands before starting
 make
 diff
 patch
@@ -15,9 +16,7 @@ readelf
 file
 ln
 
-
 -----------------------------------
-
 Types of cross compilation
 
 Type           Host(make)    Build(gcc -o hello.c)   Target(./a.out)
@@ -26,40 +25,60 @@ Cross Native   x86           ARM                     ARM
 Cross Compile  x86           x86                     ARM
 Cross Canadian x86           PowerPC                 ARM
 
+From here onwards Host will be X86 and Target will be ARM
 
 -----------------------------------
+For making a cross compiler toolchain packages required are
+1. Binutils source 
+2. GCC source
+3. Kernel source
+4. Glibc source
+5. GMP source
+6. MPC source
+7. MPFR source
 
-Cross compilation required packages
+GMP, MPC, MPFR are optional.
+
+Sequence for building packages
 1. Binutils
-2. Kernel Headers (Kernel source code)
+2. Kernel Headers (Kernel include files)
 3. GCC (minimal/bootstrap)
 4. Glibc
 5. GCC (complete)
 
 Before starting first understand the significance of these packages.
-1. Why they are required?
-2. What they will do on host system and target system?
-3. How they will be built?
+Q1. Why they are required?
+Q2. What they will do on host system and target system?
+Q3. How they will be built?
 
 And last question that is above all
-4. What we are going to achieve?
+Q4. What we are going to achieve?
+ 
+Answer to Q3 is simplest and it is covered in most of this document.
+Follow some basic steps. If error comes resolve it and packages will
+be built.
 
+Answer to Q1. Binutils
+GCC will compile the code for the target architecture.
+Glibc is required for the definition of standard library functions that will 
+run on target. For example printf is a standard library function. We require 
+definition of this function when program is build. The linker will link the 
+code with libc.so.
 
+Answer to Q4. We will have collection of utilities and library required to 
+compile a simple helloworld program, bootloader and kernel for the target.
 
-After reading many documents online found few important points. 
-Each one was using more or less these packages. The sequence of steps involved in 
-building packages were different. For example someone was building glibc before 
-GCC minimal, someone was building it after. Final result is same.
-
-
+After reading many documents online found few important points. Each one was 
+using more or less these packages. The sequence of steps involved in building 
+packages were different. For example someone was building glibc before GCC 
+minimal, someone was building it after. Final result is same.
 
 -----------------------------------
 Create directory hierarchy 
 TOOLCHAIN 
-    |-- buildtools 
-    |   `-- binutils 
-    |-- packages 
-    |   |-- binutils-2.24 
+    |-- buildtools
+    |   `-- binutils
+    |-- packages  
     |   |-- binutils-2.24.tar.bz2 
     |   |-- gcc-4.5.1.tar.bz2 
     |   |-- glibc-2.13.tar.bz2 
@@ -68,27 +87,31 @@ TOOLCHAIN
     |   |-- mpc-0.8.2.tar.gz 
     |   `-- mpfr-3.0.0.tar.bz2 
     `-- tools 
-        `-- arm-unknown-linux-gnueabi 
+        `-- arm-linux
                        
-
+-----------------------------------
 Export variables
-(only for the current shell)
-~$ export PREFIX=/home/ankur/emblogic/TOOLCHAIN/
-~$ export TARGET=arm-unknown-linux-gnueabi
+(this will be only for available to the current shell if a new tab or window
+is opened these path must be exported again)
+~$ export PREFIX=/path/to/TOOLCHAIN/tools
+~$ export TARGET=arm-linux
 
-Building Packages
+Now start building Packages
+
+-----------------------------------
 1. Binutils
 extract the contents from compressed archive
 ~$ /TOOLCHAIN/packages$ tar -xvf binutils-2.24.tar.bz2
+(drop -v option to disable the file list)
 
+~$ cd TOOLCHAIN/buildtools/binutils
 binutils help
-~$ ../binutils/configure --help  (look for system types)
+~$ ../../binutils-2.24/configure --help  (look for system types)
 
 By default, `make install' will install all the files in 
 `/usr/local/bin', `/usr/local/lib' etc.  You can specify 
 an installation prefix other than `/usr/local' using `--prefix', 
 for instance `--prefix=$HOME'.
-
 
 System types: 
   --build=BUILD     configure for building on BUILD [guessed] 
@@ -96,17 +119,29 @@ System types:
   --target=TARGET   configure for building compilers for TARGET [HOST] 
 
 configure binutils
-~$ ../binutils/configure --prefix=$PREFIX/buildtools/binutils --target=$TARGET
+~$ ../binutils/configure --target=$TARGET --prefix=$PREFIX
 
 make and install
 ~$ make
+~$ make check
 ~$ make install
 
-to verify locate ld-new or objcopy and types commands
-~$ ld-new --help
-~$ objcopy --info
+To verify, goto TOOLCHAIN/tools, a new bin directory is created with the
+binutils binaries 
+  tools
+    |-- arm-linux
+    `-- bin
+        |-- arm-linux-as
+        |-- arm-linux-ld
+        |-- arm-linux-nm
+        |-- arm-linux-objcopy
+        |-- arm-linux-objdump
 
+This will show the some information related to target
+~$ ./arm-linux-ld --help
+~$ ./arm-linux-objcopy --info
 
+-----------------------------------
 Kernel Headers
 
 The linux kernel's exported header files describe the API for user space
@@ -147,6 +182,7 @@ A better and recommended way given in
 linux-src/Documentation/make/headers_install.txt
 ~$ make headers_install ARCH=arm INSTALL_HDR_PATH=$TARGET
 
+-----------------------------------
 GCC (minimal)
 error may come in libliberty, libstdc++, libgcc, intl
 cd install README
@@ -177,10 +213,18 @@ Specify that multiple target libraries to support different target variants, cal
 --without-headers
     Tells GCC not use any target headers from a libc when building a cross compiler. When crossing to GNU/Linux, you need the headers so GCC can build the exception handling for libgcc.
 
-~/TOOLCHAIN/buildtools/gcc$ ./../../packages/gcc/configure --prefix=/home/ankur/emblogic/TOOLCHAIN/ --target=arm-unknown-linux-gnueabi --diable-multilib --disable-shared --without-headers --enable-language="c" --disable-nls --with-gmp-include=/ho
+~/TOOLCHAIN/buildtools/gcc$ ./../../packages/gcc/configure --prefix=/path/to/TOOLCHAIN/ --target=arm-linux --diable-multilib --disable-shared --without-headers --enable-language="c" --disable-nls --with-gmp-include=/ho
 
 
 ~$ config.guess
 x86_64-unknown-linux-gnu
 
 install m4 macro processor
+
+-----------------------------------
+Glibc
+
+-----------------------------------
+GCC complete
+
+-----------------------------------
