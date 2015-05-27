@@ -7,8 +7,8 @@ NOTE –
    or any such directory that contains files important for the Host system.
 4. Don't copy and execute any given command directly.
 
------------------------------------
-1. Read about the following commands before starting
+--------------------------------------------------------------------------------
+Read about the following commands before starting
 make
 diff
 patch
@@ -16,7 +16,7 @@ readelf
 file
 ln
 
------------------------------------
+--------------------------------------------------------------------------------
 Types of cross compilation
 
 Type           Host(make)    Build(gcc -o hello.c)   Target(./a.out)
@@ -27,7 +27,7 @@ Cross Canadian x86           PowerPC                 ARM
 
 From here onwards Host will be X86 and Target will be ARM
 
------------------------------------
+--------------------------------------------------------------------------------
 For making a cross compiler toolchain packages required are
 1. Binutils source 
 2. GCC source
@@ -66,18 +66,19 @@ definition of this function when program is build. The linker will link the
 code with libc.so.
 
 Answer to Q4. We will have collection of utilities and library required to 
-compile a simple helloworld program, bootloader and kernel for the target.
+compile from a simple helloworld program to bootloader andkernel for the target.
 
 After reading many documents online found few important points. Each one was 
 using more or less these packages. The sequence of steps involved in building 
 packages were different. For example someone was building glibc before GCC 
 minimal, someone was building it after. Final result is same.
 
------------------------------------
+--------------------------------------------------------------------------------
 Create directory hierarchy 
 TOOLCHAIN 
     |-- buildtools
-    |   `-- binutils
+    |   |-- binutils
+    |   `-- gcc
     |-- packages  
     |   |-- binutils-2.24.tar.bz2 
     |   |-- gcc-4.5.1.tar.bz2 
@@ -88,17 +89,17 @@ TOOLCHAIN
     |   `-- mpfr-3.0.0.tar.bz2 
     `-- tools 
         `-- arm-linux
-                       
------------------------------------
+ 
+--------------------------------------------------------------------------------
 Export variables
-(this will be only for available to the current shell if a new tab or window
+(this will be only available to the current shell if a new tab or window
 is opened these path must be exported again)
 ~$ export PREFIX=/path/to/TOOLCHAIN/tools
 ~$ export TARGET=arm-linux
 
 Now start building Packages
 
------------------------------------
+--------------------------------------------------------------------------------
 1. Binutils
 extract the contents from compressed archive
 ~$ /TOOLCHAIN/packages$ tar -xvf binutils-2.24.tar.bz2
@@ -141,56 +142,86 @@ This will show the some information related to target
 ~$ ./arm-linux-ld --help
 ~$ ./arm-linux-objcopy --info
 
------------------------------------
+--------------------------------------------------------------------------------
 Kernel Headers
 
 The linux kernel's exported header files describe the API for user space
-programs attempting to use kernel services.  These kernel header files are
+programs attempting to use kernel services. These kernel header files are
 used by the system's C library (such as glibc or uClibc) to define available
 system calls, as well as constants and structures to be used with these
 system calls.
 
-extract kernel source from archive
+There are two ways to do this
+1. Copy manually
+Extract kernel source from archive
+~$ cd TOOLCHAIN/packages/
 ~$ tar -xf linux-2.6.38.8.tar.bz2
 ~$ make ARCH=arm menuconfig
-
-Want to keep the source folder clean then use O=path_to_the_install_linux 
-with make command 
-~$ make O=~/linux/linux-2.6.17.11
-
-make KBUILD_OUTPUT=/path/to/linux/source/ O=/path/to/linux/source/ ARCH=arm menuconfig
-make KBUILD_OUTPUT=/path/to/linux/source/ O=/path/to/linux/source/ ARCH=arm headers_install ARCH=arm INSTALL_HDR_PATH=/path/to/arm-unknown-linux-gnueabi/
 
 a. Enable debugging features in kernel
    Kernel Hacking -> Kernel Debugging
 b. Kernel Features -> Use ARM eabi to compile the kernel
-
-select the ARM eabi to compile the kernel in kernel configuration
+   select the ARM eabi to compile the kernel in kernel configuration
 
 ~$ mkdir $TARGET/include
 ~$ cp -r include/linux $TARGET/include
 ~$ cp -r include/asm-arm $TARGET/include/asm
 ~$ cp -r include/asm-generic $TARGET_PREFIX/include/
 
-
 cd arch/arm
 create directory TARGET/include/asm  (new kernel)
                  TARGET/include/asm-generic (old kernel)
 copy files from linux/arch/arm to above path
 
-A better and recommended way given in 
-linux-src/Documentation/make/headers_install.txt
-~$ make headers_install ARCH=arm INSTALL_HDR_PATH=$TARGET
+2. A better and recommended way given in 
+   linux-src/Documentation/make/headers_install.txt
+   make headers_install ARCH=arm INSTALL_HDR_PATH=$TARGET
 
------------------------------------
-GCC (minimal)
-error may come in libliberty, libstdc++, libgcc, intl
-cd install README
-installing GCC configuration
-~$ cd buildtools 
-~$ mkdir gcc
-~$ cd gcc
-~$ ./../../packages/gcc-4.5.1/configure –-help
+Want to keep the source folder clean then use O=path_to_the_install_linux 
+with make command (linux kernel in nutshell)
+ make O=~/linux/linux-2.6.17.11
+
+~$ make KBUILD_OUTPUT=/path/to/packages/linux-2.6.38.8/ \
+        O=/path/to/packages/linux-2.6.38.8/ \ 
+        ARCH=arm \
+        menuconfig
+~$ make KBUILD_OUTPUT=/path/to/packages/linux-2.6.38.8/ \
+        O=/path/to/packages/linux-2.6.38.8/ \
+        ARCH=arm headers_install \
+        ARCH=arm \
+        INSTALL_HDR_PATH=/path/to/tools/arm-linux/
+
+After running these commands goto TOOLCHAIN/tools new directories will be 
+created inside arm-linux directory. 
+      tools
+	|-- arm-linux
+	|   |-- bin
+	|   |-- include
+	|   `-- lib
+	`-- bin
+	    |-- arm-linux-addr2line
+	    |-- arm-linux-ar
+	    |-- arm-linux-as
+	    |-- arm-linux-ld
+
+--------------------------------------------------------------------------------
+GCC (minimal/bootstrap)
+While building GCC error may come in libliberty, libstd++, libgcc, intl. Before
+configuring read the GCC configuration HTML page given in INSTALL folder. This
+page describes the available options.
+
+m4 macro processor should be present in the system.
+
+Extract GCC from its archive
+~$ cd TOOLCHAIN/packages/
+~$ tar -xf gcc-4.5.1.tar.bz2
+~$ cd TOOLCHAIN/buldtools/gcc
+~$ ./../../packages/gcc-4.5.1/configure --help
+
+Run this command to know about host system.
+~$ config.guess
+x86_64-unknown-linux-gnu
+
 Installation directories:
   --prefix=PREFIX         install architecture-independent files in PREFIX
                           [/usr/local]
@@ -203,28 +234,41 @@ an installation prefix other than `/usr/local' using `--prefix',
 for instance `--prefix=$HOME'.
 
 --enable-languages=c
-Specify that only a particular subset of compilers and their runtime libraries should be built.
+Specify that only a particular subset of compilers and their runtime libraries 
+should be built.
 
 --disable-multilib
-Specify that multiple target libraries to support different target variants, calling conventions, etc. should not be built.
+Specify that multiple target libraries to support different target variants, 
+calling conventions, etc. should not be built.
 
 --disable-shared to build only static libraries
 
 --without-headers
-    Tells GCC not use any target headers from a libc when building a cross compiler. When crossing to GNU/Linux, you need the headers so GCC can build the exception handling for libgcc.
+Tells GCC not use any target headers from a libc when building a cross 
+compiler. When crossing to GNU/Linux, you need the headers so GCC can build 
+the exception handling for libgcc.
 
-~/TOOLCHAIN/buildtools/gcc$ ./../../packages/gcc/configure --prefix=/path/to/TOOLCHAIN/ --target=arm-linux --diable-multilib --disable-shared --without-headers --enable-language="c" --disable-nls --with-gmp-include=/ho
+--with-as=pathname , we will use assembler in tools/bin/arm-linux-as
+Specify that the compiler should use the assembler pointed to by pathname
 
+--with-ld=pathname , use toosl/bin/arm-linux-ld
+Same as --with-as but for the linker. 
 
-~$ config.guess
-x86_64-unknown-linux-gnu
+~$ export PATH=$PREFIX/bin:$PATH
 
-install m4 macro processor
+sudo apt-get install libgmp3-dev
+sudo apt-get install libmpc-dev
+sudo apt-get install libmpc3
 
------------------------------------
+~$ ./../../packages/gcc/configure --prefix=$PREFIX \
+	--target=$TARGET --diable-multilib --disable-shared --without-headers \
+	--enable-language="c" --disable-nls --disable-threads \
+	--with-as=$PREFIX/bin --with-ld=$PREFIX/bin
+
+--------------------------------------------------------------------------------
 Glibc
 
------------------------------------
+--------------------------------------------------------------------------------
 GCC complete
 
------------------------------------
+--------------------------------------------------------------------------------
