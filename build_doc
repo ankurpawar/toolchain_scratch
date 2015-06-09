@@ -254,17 +254,62 @@ Specify that the compiler should use the assembler pointed to by pathname
 --with-ld=pathname , use toosl/bin/arm-linux-ld
 Same as --with-as but for the linker. 
 
+/usr/include/x86_64-linux-gnu  gmp.h
+/usr/include mpc.h, mpfr.h
+
+./usr/lib/x86_64-linux-gnu/libgmp.a
+ export PATH=/usr/lib/x86_64-linux-gnu:$PATH
 ~$ export PATH=$PREFIX/bin:$PATH
 
-sudo apt-get install libgmp3-dev
-sudo apt-get install libmpc-dev
-sudo apt-get install libmpc3
 
+GMP, MPC and MPFR are required to build gcc from its source. The header files
+and library files are required 
+There are two ways to resolve this, either copy source or install them.
+1. Copy the source code of gmp, mpc and mpfr inside gcc directory
+Extract the source from archive
+ 
+~$ cd /TOOLCHAIN/packages
+~$ tar -xf mpfr-3.0.0.tar.bz2
+~$ tar -xf mpc-0.8.2.tar.gz
+~$ tar -xf gmp-5.0.1.tar.bz2
+
+Move them inside gcc source folder
+~$ cd /TOOLCHAIN/packages/gcc-4.5.1
+~$ mv ../mpfr-3.0.0 ./mpfr
+~$ mv ../mpc-0.8.2 ./mpc
+~$ mv ../gmp-5.0.1 ./gmp
 ~$ ./../../packages/gcc/configure --prefix=$PREFIX \
-	--target=$TARGET --diable-multilib --disable-shared --without-headers \
-	--enable-language="c" --disable-nls --disable-threads \
-	--with-as=$PREFIX/bin --with-ld=$PREFIX/bin
+	--target=$TARGET --diable-multilib --disable-shared \
+	--without-headers --enable-language="c" --disable-nls \
+	--disable-threads --with-as=$PREFIX/bin --with-ld=$PREFIX/bin \
+	--with-gmp --with-mpc --with-mpfr\
+This step was not tested. Directly installing them seems better option. 
 
+2. Install them on the host system (for Ubuntu)
+~$ sudo apt-get install libgmp3-dev
+~$ sudo apt-get install libmpc-dev
+~$ sudo apt-get install libmpfr-dev
+
+~$ ../../packages/gcc/configure --prefix=$PREFIX --target=$TARGET \
+	--disable-multilib --disable-shared --without-headers \
+	--enable-languages=c --disable-nls --disable-threads \
+	--with-as=$PREFIX/bin --with-ld=$PREFIX/bin \
+	--with-gmp-lib=/usr/lib/x86_64-linux-gnu \
+	--with-gmp-include=/usr/include/x86_64-linux-gnu \
+	--with-mpc-lib=/usr/lib/x86_64-linux-gnu \
+	--with-mpc-include=/usr/include \
+	--with-mpfr-lib=/usr/lib/x86_64-linux-gnu \
+	--with-mpfr-include=/usr/include
+
+~$ make all gcc
+
+checking for gmp internal files... configure: error: header files gmp-impl.h 
+and longlong.h not found
+create symbolic link inside gcc/gmp directory
+ln -s ../../../packages/gmp-5.0.1/longlong.h longlong.h
+ln -s ../../../packages/gmp-5.0.1/gmp-impl.h gmp-impl.h
+~$ make check
+~$ make install
 --------------------------------------------------------------------------------
 Glibc
 
@@ -272,3 +317,8 @@ Glibc
 GCC complete
 
 --------------------------------------------------------------------------------
+Errors
+
+
+--------------------------------------------------------------------------------
+
