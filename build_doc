@@ -174,13 +174,13 @@ Want to keep the source folder clean then use O=path_to_the_install_linux
 with make command (linux kernel in nutshell)
  make O=~/linux/linux-2.6.17.11
 
-~$ make KBUILD_OUTPUT=/path/to/packages/linux-2.6.38.8/ \
-        O=/path/to/packages/linux-2.6.38.8/ \ 
+~$ make KBUILD_OUTPUT=/path/to/buildtools/linux/ \
+        O=/path/to/buildtools/linux/ \ 
         ARCH=arm \
         menuconfig
-~$ make KBUILD_OUTPUT=/path/to/packages/linux-2.6.38.8/ \
-        O=/path/to/packages/linux-2.6.38.8/ \
-        ARCH=arm headers_install \
+~$ make KBUILD_OUTPUT=/path/to/buildtools/linux/ \
+        O=/path/to/buildtools/linux/ \
+        headers_install \
         ARCH=arm \
         INSTALL_HDR_PATH=/path/to/tools/arm-linux/
 
