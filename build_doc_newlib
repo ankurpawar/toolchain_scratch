@@ -1,0 +1,174 @@
+
+-------------------------------------------------------------------------------
+Driectory hierarchy
+
+TOOLCHAIN_newlib
+|-- buildtools
+|   |-- binutils
+|   `-- gcc
+|-- packages
+|   |-- binutils-2.24
+|   |-- gcc-4.5.1
+|   |-- linux-2.6.38.8
+|   `-- newlib-1.18.0
+`-- tools
+    `-- arm-elf
+
+-------------------------------------------------------------------------------
+set path
+$ export PREFIX=/path/to/TOOLCHAIN_newlib/tools
+$ export TARGET=arm-elf
+$ export PATH=$PREFIX/bin:$PATH
+
+-------------------------------------------------------------------------------
+configure binutils
+~$../../packages/binutils-2.24/configure --target=$TARGET --prefix=$PREFIX \
+	--enable-interwork --disable-multilib --with-gnu-as --with-gnu-ld \
+	--disable-nls
+
+~$make -j 2
+~$make install
+
+-------------------------------------------------------------------------------
+Kernel headers
+
+~$ cd TOOLCHAIN_newlib/packages/linux-2.6.38.8
+
+~$make  KBUILD_OUTPUT=/path/to/TOOLCHAIN_newlib/buildtools/linux/ \
+       	O=/path/to/TOOLCHAIN_newlib/buildtools/linux/ \
+	ARCH=arm menuconfig
+
+~$ make KBUILD_OUTPUT=/path/to/TOOLCHAIN_newlib/buildtools/linux/ \
+        O=/path/to/TOOLCHAIN_newlib/buildtools/linux/ \
+        headers_install 
+        ARCH=arm \
+        INSTALL_HDR_PATH=/path/to/TOOLCHAIN_newlib/tools/arm-linux/
+
+TOOLCHAIN_newlib/buildtools
+|-- binutils
+|-- gcc
+`-- linux
+    |-- include
+    |-- Makefile
+    |-- scripts
+    `-- source -> /path/to/TOOLCHAIN_newlib/packages/linux-2.6.38.8
+
+
+TOOLCHAIN_newlib/tools
+|-- arm-linux
+    |-- bin
+    |-- include
+    |   |-- asm
+    |   |-- asm-generic
+    |   |-- drm
+    |   |-- linux
+    |   |-- mtd
+    |   |-- rdma
+    |   |-- scsi
+    |   |-- sound
+    |   |-- video
+    |   `-- xen
+    `-- lib
+
+-------------------------------------------------------------------------------
+GCC
+
+configure
+
+~$../../packages/gcc-4.5.1/configure --prefix=$PREFIX --target=$TARGET \
+	--enable-interwork --disable-multilib --enable-languages=c \
+	--with-newlib --without-hreaders --disable-shared --disable-nls \
+	--with-gnu-as --with-gnu-ld 
+
+~$make -j 2 all-gcc
+~$make install-gcc 
+
+.
+|-- arm-linux
+|   |-- bin
+|   `-- lib
+|-- bin
+|   |-- arm-linux-addr2line
+|   |-- arm-linux-ar
+|   |-- arm-linux-as
+|   |-- arm-linux-c++filt
+|   |-- arm-linux-cpp
+|   |-- arm-linux-elfedit
+|   |-- arm-linux-gcc
+|   |-- arm-linux-gcc-4.5.1
+|   |-- arm-linux-gccbug
+|   |-- arm-linux-gcov
+|   |-- arm-linux-gprof
+|   |-- arm-linux-ld
+|   |-- arm-linux-ld.bfd
+|   |-- arm-linux-nm
+|   |-- arm-linux-objcopy
+|   |-- arm-linux-objdump
+|   |-- arm-linux-ranlib
+|   |-- arm-linux-readelf
+|   |-- arm-linux-size
+|   |-- arm-linux-strings
+|   `-- arm-linux-strip
+|-- include
+|-- lib
+|   `-- gcc
+|-- libexec
+|   `-- gcc
+`-- share
+    |-- info
+    `-- man
+
+-------------------------------------------------------------------------------
+Newlib
+../../packages/newlib-1.19.0/configure --target=$TARGET --prefix=$PREFIX \
+--enable-interwork --disable-multilib --disable-nls --with-gnu-as \
+--with-gnu-ld --with-newlib
+make 
+make install
+
+
+-------------------------------------------------------------------------------
+make[3]: Entering directory `/home/ankur/emblogic/TOOLCHAIN_newlib/buildtools/newlib/etc'
+/home/ankur/emblogic/TOOLCHAIN_newlib/packages/newlib-1.18.0/missing makeinfo --split-size=5000000 --split-size=5000000 --no-split -I../../../packages/newlib-1.18.0/etc -o standards.info ../../../packages/newlib-1.18.0/etc/standards.texi
+WARNING: `makeinfo' is missing on your system.  You should only need it if
+         you modified a `.texi' or `.texinfo' file, or any other file
+         indirectly affecting the aspect of the manual.  The spurious
+         call might also be the consequence of using a buggy `make' (AIX,
+         DU, IRIX).  You might want to install the `Texinfo' package or
+         the `GNU make' package.  Grab either from any GNU archive site.
+make[3]: *** [standards.info] Error 1
+make[3]: Leaving directory `/home/ankur/emblogic/TOOLCHAIN_newlib/buildtools/newlib/etc'
+make[2]: *** [info] Error 1
+make[2]: Leaving directory `/home/ankur/emblogic/TOOLCHAIN_newlib/buildtools/newlib/etc'
+make[1]: *** [all-etc] Error 2
+make[1]: Leaving directory `/home/ankur/emblogic/TOOLCHAIN_newlib/buildtools/newlib'
+make: *** [all] Error 2
+
+sudo apt-get install texinfo
+Solution
+
+First, make sure that texinfo is installed.
+
+Second, because gcc-4.1.2 has a bug and thinks that versions of makeinfo greater than 10 are actually lower than 9 we need to do something manually. Open the Makefile that was created by the ./configure and edit the line where it says:
+
+MAKEINFO = /opt/YOURUSERNAME/newlib-1.15.0/missing makeinfo
+
+and change it to:
+
+MAKEINFO = makeinfo
+
+-------------------------------------------------------------------------------
+*** This configuration is not supported in the following subdirectories:
+     target-newlib target-libgloss
+    (Any other directories should still work fine.)
+checking for default BUILD_CONFIG... 
+checking for bison... no
+in top level configure.ac 
+arm*-*-linux-gnueabi)
+
+changes to 
+arm*-*-linux-gnueabi | arm-linux)
+-------------------------------------------------------------------------------
+../../../packages/gcc-4.5.1/gcc/doc/cppopts.texi:763: @itemx must follow @item
+to solve this error use --MAKEINFO=missing in gcc configuration
+
