@@ -2,30 +2,44 @@
 -------------------------------------------------------------------------------
 Driectory hierarchy
 
-TOOLCHAIN_newlib
-|-- buildtools
-|   |-- binutils
-|   `-- gcc
-|-- packages
-|   |-- binutils-2.24
-|   |-- gcc-4.5.1
-|   |-- linux-2.6.38.8
-|   `-- newlib-1.19.0
+Create some directories as shown
+
+TOOLCHAIN_newlib	(mkdir)
+|-- buildtools	 	(mkdir)
+|   |-- binutils	(mkdir)
+|   |-- linux		(mkdir)
+|   |-- gcc		(mkdir)
+|   |-- newlib		(mkdir)
+|   `-- gcc_full	(mkdir)
+|-- packages		(mkdir)
+|   |-- binutils-2.24	(download)
+|   |-- gcc-4.5.1	(download)
+|   |-- linux-2.6.38.8	(download)
+|   `-- newlib-1.19.0 	(download)
 `-- tools
-    `-- arm-elf
+    `-- arm-elf		(mkdir)
+
+(mkdir) Create the directory with given name
+(download) Get the source from repository and copy it into packages directory.
 
 -------------------------------------------------------------------------------
-set path
+Set environment variables
+
 $ export PREFIX=/path/to/TOOLCHAIN_newlib/tools
 $ export TARGET=arm-elf
 $ export PATH=$PREFIX/bin:$PATH
 
 -------------------------------------------------------------------------------
-configure binutils
+Binutils
+
+~$cd TOOLCHAIN_newlib/buildtools/binutils
+
+Configure binutils
 ~$../../packages/binutils-2.24/configure --target=$TARGET --prefix=$PREFIX \
 	--enable-interwork --disable-multilib --with-gnu-as --with-gnu-ld \
 	--disable-nls
 
+Make and install
 ~$make -j 2
 ~$make install
 
@@ -34,64 +48,46 @@ Kernel headers
 
 ~$ cd TOOLCHAIN_newlib/packages/linux-2.6.38.8
 
+Configure Kernel
 ~$make  KBUILD_OUTPUT=/path/to/TOOLCHAIN_newlib/buildtools/linux/ \
        	O=/path/to/TOOLCHAIN_newlib/buildtools/linux/ \
 	ARCH=arm menuconfig
 
+Install headers
 ~$ make KBUILD_OUTPUT=/path/to/TOOLCHAIN_newlib/buildtools/linux/ \
         O=/path/to/TOOLCHAIN_newlib/buildtools/linux/ \
         headers_install 
         ARCH=arm \
-        INSTALL_HDR_PATH=/path/to/TOOLCHAIN_newlib/tools/arm-linux/
-
-TOOLCHAIN_newlib/buildtools
-|-- binutils
-|-- gcc
-`-- linux
-    |-- include
-    |-- Makefile
-    |-- scripts
-    `-- source -> /path/to/TOOLCHAIN_newlib/packages/linux-2.6.38.8
-
-
-TOOLCHAIN_newlib/tools
-|-- arm-linux
-    |-- bin
-    |-- include
-    |   |-- asm
-    |   |-- asm-generic
-    |   |-- drm
-    |   |-- linux
-    |   |-- mtd
-    |   |-- rdma
-    |   |-- scsi
-    |   |-- sound
-    |   |-- video
-    |   `-- xen
-    `-- lib
+        INSTALL_HDR_PATH=/path/to/TOOLCHAIN_newlib/tools/arm-elf/
 
 -------------------------------------------------------------------------------
-GCC
+GCC(bootstrap)
 
-configure
+~$cd TOOLCHAIN_newlib/buildtools/gcc
 
+Configure
 ~$../../packages/gcc-4.5.1/configure --prefix=$PREFIX --target=$TARGET \
 	--enable-interwork --disable-multilib --enable-languages=c \
 	--with-newlib --without-hreaders --disable-shared --disable-nls \
 	--with-gnu-as --with-gnu-ld 
 
+Make and install
 ~$make -j 2 all-gcc
 ~$make install-gcc 
 
 -------------------------------------------------------------------------------
 Newlib
 
+~$cd TOOLCHAIN_newlib/buildtools/newlib
+
+Configure
 ~$ ../../packages/newlib-1.19.0/configure --target=$TARGET --prefix=$PREFIX \
 	--enable-interwork --disable-multilib --disable-nls --with-gnu-as \
 	--with-gnu-ld --with-newlib
+
+Make and install
 ~$make 
 ~$make install
-
 
 -------------------------------------------------------------------------------
 GCC full
@@ -103,9 +99,151 @@ GCC full
 	--with-gnu-as --with-gnu-ld MAKEINFO=missing
 
 ~$make -j 2
+~$make install
 
 MAKEINFO=missing is not required if texinfo is older
 
+-------------------------------------------------------------------------------
+Final Directory Hierarchy
+
+After all the successful build the directories created are.
+
+TOOLCHAIN_newlib/buildtools
+|-- binutils
+|   |-- bfd
+|   |-- binutils
+|   |-- config.log
+|   |-- config.status
+|   |-- etc
+|   |-- gas
+|   |-- gprof
+|   |-- intl
+|   |-- ld
+|   |-- libiberty
+|   |-- Makefile
+|   |-- opcodes
+|   `-- serdep.tmp
+|-- gcc
+|   |-- build-x86_64-unknown-linux-gnu
+|   |-- config.log
+|   |-- config.status
+|   |-- fixincludes
+|   |-- gcc
+|   |-- intl
+|   |-- libcpp
+|   |-- libdecnumber
+|   |-- libiberty
+|   |-- Makefile
+|   |-- serdep.tmp
+|   `-- zlib
+|-- gcc_full
+|   |-- arm-elf
+|   |-- build-x86_64-unknown-linux-gnu
+|   |-- config.log
+|   |-- config.status
+|   |-- fixincludes
+|   |-- gcc
+|   |-- intl
+|   |-- libcpp
+|   |-- libdecnumber
+|   |-- libiberty
+|   |-- Makefile
+|   |-- serdep.tmp
+|   `-- zlib
+|-- linux
+|   |-- include
+|   |-- Makefile
+|   |-- scripts
+|   `-- source -> /path/to/TOOLCHAIN/packages/linux-2.6.38.8
+`-- newlib
+    |-- arm-elf
+    |-- config.log
+    |-- config.status
+    |-- etc
+    |-- Makefile
+    `-- serdep.tmp
+ 
+
+TOOLCHAIN_newlib/packages directory will remain unchanged 
+
+TOOLCHAIN_newlib/tools
+|-- arm-elf
+|   |-- bin
+|   |   |-- ar
+|   |   |-- as
+|   |   |-- c++
+|   |   |-- g++
+|   |   |-- gcc
+|   |   |-- ld
+|   |   |-- ld.bfd
+|   |   |-- nm
+|   |   |-- objcopy
+|   |   |-- objdump
+|   |   |-- ranlib
+|   |   `-- strip
+|   |-- include
+|   |   |-- asm
+|   |   |-- asm-generic
+|   |   |-- errno.h
+|   |   |-- fcntl.h
+|   |   |-- limits.h
+|   |   |-- newlib.h
+|   |   |-- signal.h
+|   |   |-- stdio.h
+|   |   |-- stdlib.h
+|   |   |-- string.h
+|   |   |-- strings.h
+|   |   |-- time.h
+|   |   |-- unistd.h
+|   |   `-- xen
+|   `-- lib
+|       |-- crt0.o
+|       |-- ldscripts
+|       |-- libc.a
+|       |-- libg.a
+|       |-- libgloss-linux.a
+|       |-- libiberty.a
+|       |-- libm.a
+|       |-- libstdc++.a
+|       |-- linux-crt0.o
+|       `-- redboot-syscalls.o
+|-- bin
+|   |-- arm-elf-addr2line
+|   |-- arm-elf-ar
+|   |-- arm-elf-as
+|   |-- arm-elf-c++
+|   |-- arm-elf-c++filt
+|   |-- arm-elf-cpp
+|   |-- arm-elf-elfedit
+|   |-- arm-elf-g++
+|   |-- arm-elf-gcc
+|   |-- arm-elf-gcc-4.5.1
+|   |-- arm-elf-gccbug
+|   |-- arm-elf-gcov
+|   |-- arm-elf-gprof
+|   |-- arm-elf-ld
+|   |-- arm-elf-ld.bfd
+|   |-- arm-elf-nm
+|   |-- arm-elf-objcopy
+|   |-- arm-elf-objdump
+|   |-- arm-elf-ranlib
+|   |-- arm-elf-readelf
+|   |-- arm-elf-size
+|   |-- arm-elf-strings
+|   `-- arm-elf-strip
+|-- include
+|-- lib
+|   |-- gcc
+|   |   `-- arm-elf
+|   `-- libiberty.a
+|-- libexec
+|   `-- gcc
+|       `-- arm-elf
+`-- share
+    |-- gcc-4.5.1
+    |-- info
+    `-- man
+        
 
 -------------------------------------------------------------------------------
 ERRORS
