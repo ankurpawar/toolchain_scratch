@@ -77,18 +77,23 @@ TOOLCHAIN
     |-- packages  
     |   |-- binutils-2.24.tar.bz2 
     |   |-- gcc-4.5.1.tar.bz2 
-    |   |-- glibc-2.13.tar.bz2 
+    |   |-- glibc-2.13.tar.bz2
+    |   |-- glinc-2.13.tar.bz2	 
     |   `-- linux-2.6.38.8.tar.bz2 
-    `-- tools 
-        `-- arm-linux
+    |-- sysroot-arm-unknown-linux-gnueabi
+    `-- tools
+        `-- arm-unknown-linux-gnueabi
  
 --------------------------------------------------------------------------------
 Export variables
 (this will be only available to the current shell if a new tab or window
 is opened these path must be exported again)
 ~$ export PREFIX=/path/to/TOOLCHAIN/tools
-~$ export TARGET=arm-linux
+~$ export TARGET=arm-unknown-linux-gnueabi
 ~$ export PATH=$PREFIX/bin:$PATH
+~$ export \
+SYSROOT_PATH=/home/ankur/emblogic/TOOLCHAIN/arm-unknown-linux-gnueabi/sysroot
+
 
 Now start building Packages
 
@@ -113,27 +118,18 @@ System types:
   --target=TARGET   configure for building compilers for TARGET [HOST] 
 
 configure binutils
-~$ ../binutils/configure --target=$TARGET --prefix=$PREFIX
+~$ ../binutils/configure --target=$TARGET \
+			--prefix=$PREFIX \
+			--with-sysroot=$SYSROOT_PATH
 
 make and install
 ~$ make
-~$ make check
 ~$ make install
 
-To verify, goto TOOLCHAIN/tools, a new bin directory is created with the
-binutils binaries 
-  tools
-    |-- arm-linux
-    `-- bin
-        |-- arm-linux-as
-        |-- arm-linux-ld
-        |-- arm-linux-nm
-        |-- arm-linux-objcopy
-        |-- arm-linux-objdump
-
 This will show the some information related to target
-~$ ./arm-linux-ld --help
-~$ ./arm-linux-objcopy --info
+~$ cd TOOLCHAIN/tools/bin
+~$ ./arm-elf-ld --help
+~$ ./arm-elf-objcopy --info
 
 --------------------------------------------------------------------------------
 Kernel Headers
@@ -182,21 +178,11 @@ with make command (linux kernel in nutshell)
         O=/path/to/buildtools/linux/ \
         headers_install \
         ARCH=arm \
-        INSTALL_HDR_PATH=/path/to/tools/arm-linux/
+        INSTALL_HDR_PATH=/path/to/tools/arm-elf/
 
-After running these commands goto TOOLCHAIN/tools new directories will be 
-created inside arm-linux directory. 
-      tools
-	|-- arm-linux
-	|   |-- bin
-	|   |-- include
-	|   `-- lib
-	`-- bin
-	    |-- arm-linux-addr2line
-	    |-- arm-linux-ar
-	    |-- arm-linux-as
-	    |-- arm-linux-ld
+3. 
 
+~$ make headers_install ARCH=arm INSTALL_HDR_PATH=$PREFIX/$TARGET 
 --------------------------------------------------------------------------------
 GCC (minimal/bootstrap)
 While building GCC error may come in libliberty, libstd++, libgcc, intl. Before
@@ -256,14 +242,30 @@ finds is the GNU assembler.
 Configure GCC
 ~$ ../../packages/gcc/configure --prefix=$PREFIX --target=$TARGET \
 	--disable-multilib --disable-shared --without-headers \
-	--enable-languages=c --disable-nls --disable-threads \
-	--with-gnu-as --with-gnu-ld
+	--enable-languages="c" --disable-nls --disable-threads \
 
 ~$ make all-gcc
 ~$ make install-gcc
 
 --------------------------------------------------------------------------------
 Glibc
+
+Extract Glibc and Glibc ports
+../../packages/glibc-2.13/configure --prefix=$PREFIX --host=arm-unknown-linux-gnueabi --build=x86_64-unknown-linux-gnu --with-headers=$PREFIX/sysroot/usr/include/ libc_cv_c_cleanup=yes libc_cv_forced_unwind=yes --enable-add-ons=/home/ankur/emblogic/TOOLCHAIN/packages/glibc-ports-2.13,nptl --enable-kernel=2.6.0 --disable-multilib --target=$TARGET libc_cv_arm_tls=yes
+
+install-headers cross-compiling=yes install_root=$PREFIX/sysroot
+
+/home/ankur/emblogic/TOOLCHAIN/packages/glibc-ports-2.13/sysdeps/unix/sysv/linux/arm/ldsodefs.h:41:0: warning: "MORE_ELF_HEADER_DATA" redefined
+../sysdeps/unix/sysv/linux/ldsodefs.h:64:0: note: this is the location of the previous definition
+make[2]: *** [/home/ankur/emblogic/TOOLCHAIN/buildtool/glibc/rtld-global-offsets.h] Error 1
+
+ #undef VALID_ELF_HEADER
+ #undef VALID_ELF_OSABI
++#undef MORE_ELF_HEADER_DATA
+ 
+ #ifdef __ARM_EABI__
+ #define EXTRA_OSABI ELFOSABI_ARM_AEABI
+
 
 --------------------------------------------------------------------------------
 GCC complete
@@ -274,4 +276,36 @@ Errors
 comes later during build phase. 
 
 --------------------------------------------------------------------------------
+../../../packages/gcc-4.5.1/gcc/doc/cppopts.texi:763: @itemx must follow @item
+Solution
+To solve this error use MAKEINFO=missing in gcc configuration
+--------------------------------------------------------------------------------
+../../../packages/gcc-4.5.1/gcc/doc/cppopts.texi:763: @itemx must follow @item
+make[1]: *** [doc/cpp.info] Error 1
+make[1]: Leaving directory `/home/ankur/emblogic/TOOLCHAIN/buildtool/gcc/gcc'
+make: *** [all-gcc] Error 2
+cppopts.texi:763
+change @itemx --help to @item --help
+--------------------------------------------------------------------------------
+../../../packages/gcc-4.5.1/gcc/doc/gcc.texi:89: warning: @tex should only appear at a line beginning
+../../../packages/gcc-4.5.1/gcc/doc/gcc.texi:89: warning: @end should only appear at a line beginning
+../../../packages/gcc-4.5.1/gcc/doc/gcc.texi:91: warning: @tex should only appear at a line beginning
+../../../packages/gcc-4.5.1/gcc/doc/gcc.texi:91: warning: @end should only appear at a line beginning
+../../../packages/gcc-4.5.1/gcc/doc/invoke.texi:4878: @itemx must follow @item
+../../../packages/gcc-4.5.1/gcc/doc/invoke.texi:4882: @itemx must follow @item
+../../../packages/gcc-4.5.1/gcc/doc/invoke.texi:4893: @itemx must follow @item
+../../../packages/gcc-4.5.1/gcc/doc/invoke.texi:4897: @itemx must follow @item
+../../../packages/gcc-4.5.1/gcc/doc/invoke.texi:4942: @itemx must follow @item
+../../../packages/gcc-4.5.1/gcc/doc/invoke.texi:4972: @itemx must follow @item
+../../../packages/gcc-4.5.1/gcc/doc/invoke.texi:4984: @itemx must follow @item
+
+@itemx POINTER_PLUS_EXPR to @item POINTER_PLUS_EXPR
+@itemx PLUS_EXPR to @item PLUS_EXPR
+@itemx -fdump-rtl-cprop_hardreg to @item -fdump-rtl-cprop_hardreg
+@itemx -fdump-rtl-csa to @item -fdump-rtl-csa
+@itemx -fdump-rtl-dce to @item -fdump-rtl-dce
+@item -fdump-rtl-dbr
+@item -fdump-rtl-into_cfglayout
+@item -fdump-rtl-outof_cfglayout
+@item -fdump-rtl-pro_and_epilogue
 
