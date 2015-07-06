@@ -1,3 +1,72 @@
+NOTE – 
+1. This document is based on my personal experience and understanding. This
+   may be different from others.
+2. First read man page of any command that is not known or whose output is 
+   not known.
+3. Don't execute any command that install anything in the /usr/bin
+   or any such directory that contains files important for the Host system.
+4. Don't copy and execute any given command directly.
+
+--------------------------------------------------------------------------------
+Read about the following commands before starting
+make
+diff
+patch
+readelf
+file
+ln
+
+--------------------------------------------------------------------------------
+Types of cross compilation
+
+Type           Host(make)    Build(gcc -o hello.c)   Target(./a.out)
+Native         x86           x86                     x86
+Cross Native   x86           ARM                     ARM
+Cross Compile  x86           x86                     ARM
+Cross Canadian x86           PowerPC                 ARM
+
+From here onwards Host will be X86 and Target will be ARM
+
+--------------------------------------------------------------------------------
+For making a cross compiler toolchain packages required are
+1. Binutils source 
+2. GCC source
+3. Kernel source
+4. Newlib source
+
+Sequence for building packages
+1. Binutils
+2. Kernel Headers (Kernel include files)
+3. GCC (minimal/bootstrap)
+4. Newlib
+5. GCC (complete)
+
+Before starting first understand the significance of these packages.
+Q1. Why they are required?
+Q2. What they will do on host system and target system?
+Q3. How they will be built?
+
+And last question that is above all
+Q4. What we are going to achieve?
+ 
+Answer to Q3 is simplest and it is covered in most of this document.
+Follow some basic steps. If error comes resolve it and packages will
+be built.
+
+Answer to Q1. Binutils
+GCC will compile the code for the target architecture.
+Glibc is required for the definition of standard library functions that will 
+run on target. For example printf is a standard library function. We require 
+definition of this function when program is build. The linker will link the 
+code with libc.so.
+
+Answer to Q4. We will have collection of utilities and library required to 
+compile from a simple helloworld program to bootloader andkernel for the target.
+
+After reading many documents online found few important points. Each one was 
+using more or less these packages. The sequence of steps involved in building 
+packages were different. For example someone was building glibc before GCC 
+minimal, someone was building it after. Final result is same.
 
 -------------------------------------------------------------------------------
 Driectory hierarchy
@@ -16,7 +85,7 @@ TOOLCHAIN_newlib	(mkdir)
 |   |-- gcc-4.5.1	(download)
 |   |-- linux-2.6.38.8	(download)
 |   `-- newlib-1.19.0 	(download)
-`-- tools
+`-- tools		(mkdir)
     `-- arm-elf		(mkdir)
 
 (mkdir) Create the directory with given name
