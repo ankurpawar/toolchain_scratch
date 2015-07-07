@@ -313,6 +313,15 @@ TOOLCHAIN_newlib/tools
     |-- info
     `-- man
         
+-------------------------------------------------------------------------------
+Test Toolchain
+
+Create a hello world program
+~$arm-elf -o hello hello.c
+
+~$file hello
+hello: ELF 32-bit LSB  executable, ARM, version 1, \
+       statically linked, not stripped
 
 -------------------------------------------------------------------------------
 ERRORS
