@@ -1,11 +1,9 @@
-NOTE – 
-1. This document is based on my personal experience and understanding. This
-   may be different from others.
-2. First read man page of any command that is not known or whose output is 
+NOTE –
+1. First read man page of any command that is not known or whose output is 
    not known.
-3. Don't execute any command that install anything in the /usr/bin
+2. Don't execute any command that install anything in the /usr/bin
    or any such directory that contains files important for the Host system.
-4. Don't copy and execute any given command directly.
+3. Don't copy and execute any given command directly.
 
 --------------------------------------------------------------------------------
 Read about the following commands before starting
@@ -25,13 +23,13 @@ Cross Native   x86           ARM                     ARM
 Cross Compile  x86           x86                     ARM
 Cross Canadian x86           PowerPC                 ARM
 
-From here onwards Host will be X86 and Target will be ARM
+From here onwards Host will be x86 and Target will be ARM
 
 --------------------------------------------------------------------------------
 For making a cross compiler toolchain packages required are
 1. Binutils source 
 2. GCC source
-3. Kernel source
+3. Linux Kernel source
 4. Newlib source
 
 Sequence for building packages
@@ -55,31 +53,31 @@ be built.
 
 Answer to Q1. Binutils
 GCC will compile the code for the target architecture.
-Glibc is required for the definition of standard library functions that will 
+Newlib is required for the definition of standard library functions that will 
 run on target. For example printf is a standard library function. We require 
 definition of this function when program is build. The linker will link the 
-code with libc.so.
+code with libc.a.
 
 Answer to Q4. We will have collection of utilities and library required to 
-compile from a simple helloworld program to bootloader andkernel for the target.
+compile from a simple helloworld program to bootloader and kernel for the 
+target.
 
 After reading many documents online found few important points. Each one was 
 using more or less these packages. The sequence of steps involved in building 
 packages were different. For example someone was building glibc before GCC 
 minimal, someone was building it after. Final result is same.
 
+The newlib library will be built statically.
 -------------------------------------------------------------------------------
 Driectory hierarchy
 
 Create some directories as shown
 
-TOOLCHAIN_newlib	(mkdir)
+arm-toolchain-newlib	(mkdir)
 |-- buildtools	 	(mkdir)
 |   |-- binutils	(mkdir)
-|   |-- linux		(mkdir)
 |   |-- gcc		(mkdir)
 |   |-- newlib		(mkdir)
-|   `-- gcc_full	(mkdir)
 |-- packages		(mkdir)
 |   |-- binutils-2.24	(download)
 |   |-- gcc-4.5.1	(download)
@@ -89,24 +87,24 @@ TOOLCHAIN_newlib	(mkdir)
     `-- arm-elf		(mkdir)
 
 (mkdir) Create the directory with given name
-(download) Get the source from repository and copy it into packages directory.
+(download) download the source from website and copy it into packages 
+directory.
 
 -------------------------------------------------------------------------------
 Set environment variables
 
-$ export PREFIX=/path/to/TOOLCHAIN_newlib/tools
-$ export TARGET=arm-elf
-$ export PATH=$PREFIX/bin:$PATH
+~$ export PREFIX=/path/to/TOOLCHAIN_newlib/tools
+~$ export TARGET=arm-elf
+~$ export PATH=$PREFIX/bin:$PATH
 
 -------------------------------------------------------------------------------
 Binutils
 
-~$cd TOOLCHAIN_newlib/buildtools/binutils
+~$cd arm-toolchain-newlib/buildtools/binutils
 
 Configure binutils
 ~$../../packages/binutils-2.24/configure --target=$TARGET --prefix=$PREFIX \
-	--enable-interwork --disable-multilib --with-gnu-as --with-gnu-ld \
-	--disable-nls
+	--enable-interwork --disable-multilib --disable-nls
 
 Make and install
 ~$make -j 2
@@ -115,29 +113,20 @@ Make and install
 -------------------------------------------------------------------------------
 Kernel headers
 
-~$ cd TOOLCHAIN_newlib/packages/linux-2.6.38.8
-
-Configure Kernel
-~$make  KBUILD_OUTPUT=/path/to/TOOLCHAIN_newlib/buildtools/linux/ \
-       	O=/path/to/TOOLCHAIN_newlib/buildtools/linux/ \
-	ARCH=arm menuconfig
+~$ cd arm-ttolchain-newlib/packages/linux-2.6.38.8
 
 Install headers
-~$ make KBUILD_OUTPUT=/path/to/TOOLCHAIN_newlib/buildtools/linux/ \
-        O=/path/to/TOOLCHAIN_newlib/buildtools/linux/ \
-        headers_install 
-        ARCH=arm \
-        INSTALL_HDR_PATH=/path/to/TOOLCHAIN_newlib/tools/arm-elf/
+~$ make ARCH=arm headers_install INSTALL_HDR_PATH=$PREFIX/$TARGET
 
 -------------------------------------------------------------------------------
 GCC(bootstrap)
 
-~$cd TOOLCHAIN_newlib/buildtools/gcc
+~$cd arm-toolchain-newlib/buildtools/gcc
 
 Configure
 ~$../../packages/gcc-4.5.1/configure --prefix=$PREFIX --target=$TARGET \
 	--enable-interwork --disable-multilib --enable-languages=c \
-	--with-newlib --without-hreaders --disable-shared --disable-nls \
+	--with-newlib --without-headers --disable-shared --disable-nls \
 	--with-gnu-as --with-gnu-ld 
 
 Make and install
@@ -147,12 +136,12 @@ Make and install
 -------------------------------------------------------------------------------
 Newlib
 
-~$cd TOOLCHAIN_newlib/buildtools/newlib
+~$cd arm-toolchain-newlib/buildtools/newlib
 
 Configure
 ~$ ../../packages/newlib-1.19.0/configure --target=$TARGET --prefix=$PREFIX \
 	--enable-interwork --disable-multilib --disable-nls --with-gnu-as \
-	--with-gnu-ld --with-newlib
+	--with-gnu-ld
 
 Make and install
 ~$make 
@@ -161,158 +150,72 @@ Make and install
 -------------------------------------------------------------------------------
 GCC full
 
-~$../../packages/gcc-4.5.1/configure --target=$TARGET --prefix=$PREFIX \
-	--enable-interwork --disable-multilib --enable-languages="c,c++" \
-	--with-newlib --without-headers --disable-libssp --disable-shared \
-	--disable-nls --disable-hardfloat --enable-threads=single \
-	--with-gnu-as --with-gnu-ld MAKEINFO=missing
+~$ cd arm-toolchain-newlib/buildtools/gcc
+
+~$ ../../packages/gcc-4.5.1/configure --prefix=$PREFIX --target=$TARGET \
+	--enable-interwork --disable-multilib --enable-languages="c,c++"\
+	--with-newlib --without-headers --enable-shared --disable-nls \
+	--disable-hardfloat --enable-threads=single --with-gnu-ld \
+	--with-gnu-as
 
 ~$make -j 2
 ~$make install
-
-MAKEINFO=missing is not required if texinfo is older
 
 -------------------------------------------------------------------------------
 Final Directory Hierarchy
 
 After all the successful build the directories created are.
 
-TOOLCHAIN_newlib/buildtools
-|-- binutils
-|   |-- bfd
+arm-toolchain-newlib
+|-- buildtools
 |   |-- binutils
-|   |-- config.log
-|   |-- config.status
-|   |-- etc
-|   |-- gas
-|   |-- gprof
-|   |-- intl
-|   |-- ld
-|   |-- libiberty
-|   |-- Makefile
-|   |-- opcodes
-|   `-- serdep.tmp
-|-- gcc
-|   |-- build-x86_64-unknown-linux-gnu
-|   |-- config.log
-|   |-- config.status
-|   |-- fixincludes
 |   |-- gcc
-|   |-- intl
-|   |-- libcpp
-|   |-- libdecnumber
-|   |-- libiberty
-|   |-- Makefile
-|   |-- serdep.tmp
-|   `-- zlib
-|-- gcc_full
-|   |-- arm-elf
-|   |-- build-x86_64-unknown-linux-gnu
-|   |-- config.log
-|   |-- config.status
-|   |-- fixincludes
-|   |-- gcc
-|   |-- intl
-|   |-- libcpp
-|   |-- libdecnumber
-|   |-- libiberty
-|   |-- Makefile
-|   |-- serdep.tmp
-|   `-- zlib
-|-- linux
-|   |-- include
-|   |-- Makefile
-|   |-- scripts
-|   `-- source -> /path/to/TOOLCHAIN/packages/linux-2.6.38.8
-`-- newlib
+|   `-- newlib
+|-- packages
+|   |-- binutils-2.24
+|   |-- gcc-4.5.1
+|   |-- linux-2.6.38.8
+|   `-- newlib-1.19.0
+`-- tools
     |-- arm-elf
-    |-- config.log
-    |-- config.status
-    |-- etc
-    |-- Makefile
-    `-- serdep.tmp
- 
+    |   |-- bin
+    |   |-- include
+    |   `-- lib
+    |-- bin
+    |   |-- arm-elf-addr2line
+    |   |-- arm-elf-ar
+    |   |-- arm-elf-as
+    |   |-- arm-elf-c++
+    |   |-- arm-elf-c++filt
+    |   |-- arm-elf-cpp
+    |   |-- arm-elf-elfedit
+    |   |-- arm-elf-g++
+    |   |-- arm-elf-gcc
+    |   |-- arm-elf-gcc-4.5.1
+    |   |-- arm-elf-gccbug
+    |   |-- arm-elf-gcov
+    |   |-- arm-elf-gprof
+    |   |-- arm-elf-ld
+    |   |-- arm-elf-ld.bfd
+    |   |-- arm-elf-nm
+    |   |-- arm-elf-objcopy
+    |   |-- arm-elf-objdump
+    |   |-- arm-elf-ranlib
+    |   |-- arm-elf-readelf
+    |   |-- arm-elf-size
+    |   |-- arm-elf-strings
+    |   `-- arm-elf-strip
+    |-- include
+    |-- lib
+    |   |-- gcc
+    |   `-- libiberty.a
+    |-- libexec
+    |   `-- gcc
+    `-- share
+        |-- gcc-4.5.1
+        |-- info
+        `-- man
 
-TOOLCHAIN_newlib/packages directory will remain unchanged 
-
-TOOLCHAIN_newlib/tools
-|-- arm-elf
-|   |-- bin
-|   |   |-- ar
-|   |   |-- as
-|   |   |-- c++
-|   |   |-- g++
-|   |   |-- gcc
-|   |   |-- ld
-|   |   |-- ld.bfd
-|   |   |-- nm
-|   |   |-- objcopy
-|   |   |-- objdump
-|   |   |-- ranlib
-|   |   `-- strip
-|   |-- include
-|   |   |-- asm
-|   |   |-- asm-generic
-|   |   |-- errno.h
-|   |   |-- fcntl.h
-|   |   |-- limits.h
-|   |   |-- newlib.h
-|   |   |-- signal.h
-|   |   |-- stdio.h
-|   |   |-- stdlib.h
-|   |   |-- string.h
-|   |   |-- strings.h
-|   |   |-- time.h
-|   |   |-- unistd.h
-|   |   `-- xen
-|   `-- lib
-|       |-- crt0.o
-|       |-- ldscripts
-|       |-- libc.a
-|       |-- libg.a
-|       |-- libgloss-linux.a
-|       |-- libiberty.a
-|       |-- libm.a
-|       |-- libstdc++.a
-|       |-- linux-crt0.o
-|       `-- redboot-syscalls.o
-|-- bin
-|   |-- arm-elf-addr2line
-|   |-- arm-elf-ar
-|   |-- arm-elf-as
-|   |-- arm-elf-c++
-|   |-- arm-elf-c++filt
-|   |-- arm-elf-cpp
-|   |-- arm-elf-elfedit
-|   |-- arm-elf-g++
-|   |-- arm-elf-gcc
-|   |-- arm-elf-gcc-4.5.1
-|   |-- arm-elf-gccbug
-|   |-- arm-elf-gcov
-|   |-- arm-elf-gprof
-|   |-- arm-elf-ld
-|   |-- arm-elf-ld.bfd
-|   |-- arm-elf-nm
-|   |-- arm-elf-objcopy
-|   |-- arm-elf-objdump
-|   |-- arm-elf-ranlib
-|   |-- arm-elf-readelf
-|   |-- arm-elf-size
-|   |-- arm-elf-strings
-|   `-- arm-elf-strip
-|-- include
-|-- lib
-|   |-- gcc
-|   |   `-- arm-elf
-|   `-- libiberty.a
-|-- libexec
-|   `-- gcc
-|       `-- arm-elf
-`-- share
-    |-- gcc-4.5.1
-    |-- info
-    `-- man
-        
 -------------------------------------------------------------------------------
 Test Toolchain
 
@@ -326,23 +229,26 @@ hello: ELF 32-bit LSB  executable, ARM, version 1, \
 -------------------------------------------------------------------------------
 ERRORS
 ---------------------------------------
-TOOLCHAIN_newlib/packages/newlib-1.18.0/missing makeinfo --split-size=5000000 \
-	--split-size=5000000 --no-split -I../../../packages/newlib-1.18.0/etc \
-	-o standards.info ../../../packages/newlib-1.18.0/etc/standards.texi
-WARNING: `makeinfo' is missing on your system.  You should only need it if
-         you modified a `.texi' or `.texinfo' file, or any other file
-         indirectly affecting the aspect of the manual.  The spurious
-         call might also be the consequence of using a buggy `make' (AIX,
-         DU, IRIX).  You might want to install the `Texinfo' package or
-         the `GNU make' package.  Grab either from any GNU archive site.
 
-Solution
-sudo apt-get install texinfo
-
----------------------------------------
+../../../packages/gcc-4.5.1/gcc/doc/gcc.texi:89: warning: @tex should only appear at a line beginning
+../../../packages/gcc-4.5.1/gcc/doc/gcc.texi:89: warning: @end should only appear at a line beginning
+../../../packages/gcc-4.5.1/gcc/doc/gcc.texi:91: warning: @tex should only appear at a line beginning
+../../../packages/gcc-4.5.1/gcc/doc/gcc.texi:91: warning: @end should only appear at a line beginning
+../../../packages/gcc-4.5.1/gcc/doc/invoke.texi:4878: @itemx must follow @item
+../../../packages/gcc-4.5.1/gcc/doc/invoke.texi:4882: @itemx must follow @item
+../../../packages/gcc-4.5.1/gcc/doc/invoke.texi:4893: @itemx must follow @item
+../../../packages/gcc-4.5.1/gcc/doc/invoke.texi:4897: @itemx must follow @item
+../../../packages/gcc-4.5.1/gcc/doc/invoke.texi:4942: @itemx must follow @item
+../../../packages/gcc-4.5.1/gcc/doc/invoke.texi:4972: @itemx must follow @item
+../../../packages/gcc-4.5.1/gcc/doc/invoke.texi:4984: @itemx must follow @item
 ../../../packages/gcc-4.5.1/gcc/doc/cppopts.texi:763: @itemx must follow @item
-Solution
-To solve this error use MAKEINFO=missing in gcc configuration
 
--------------------------------------------------------------------------------
+@itemx -fdump-rtl-csa
+@opindex fdump-rtl-csa
+Dump after combining stack adjustments.
 
+change to 
+
+@item -fdump-rtl-csa
+@opindex fdump-rtl-csa
+Dump after combining stack adjustments.
