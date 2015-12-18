@@ -1,2 +1,2 @@
-Collection of packages and documents for building toolchain from scratch.
-This document is not complete, update is in progress.
+Document to buil a cross toolchain for ARM processor from the binutils, gcc 
+and other sources.
